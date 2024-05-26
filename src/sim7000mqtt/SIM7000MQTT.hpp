@@ -70,8 +70,6 @@ private:
 	State state_;
 	State prevState_;
 
-	std::queue
-
 };
 
 #endif //TESTSIM7000C_SIM7000MQTT_HPP
