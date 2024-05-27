@@ -20,7 +20,11 @@ public:
 	using Password = std::string;
 
 	using Topic = std::string;
-	using Message = std::string;
+
+	enum class Status {
+		kOk,
+		kError
+	};
 
 private:
 	enum class State {
@@ -34,6 +38,8 @@ private:
 		kFatalError
 	};
 
+	using Message = std::pair<Topic, std::string>;
+
 public:
 	SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
 				CliendID client_id, Username username, Password password);
@@ -41,7 +47,7 @@ public:
 	void run() noexcept;
 	void process() noexcept;
 
-	void publishMessage(const Topic& topic, const Message& message) noexcept;
+	void publishMessage(const Topic& topic, const std::string& message) noexcept;
 
 private:
 	void start_() noexcept;
@@ -53,7 +59,11 @@ private:
 	void idle_() noexcept;
 	void fatalError_() noexcept;
 
-	inline void setState_(State new_state) {
+	Status rawSend_(const std::string& str, std::string& reply) noexcept;
+
+	static bool checkOk_(const std::string& str) noexcept;
+
+	inline void setState_(State new_state) noexcept {
 		prevState_ = state_;
 		state_ = new_state;
 	}
@@ -70,6 +80,7 @@ private:
 	State state_;
 	State prevState_;
 
+	std::queue<Message> msg_queue_;
 };
 
 #endif //TESTSIM7000C_SIM7000MQTT_HPP
