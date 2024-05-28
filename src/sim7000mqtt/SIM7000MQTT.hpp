@@ -28,33 +28,23 @@ public:
 
 private:
 	enum class State {
-		kStart,
-		kConnectSetup,
-		kMQTTConfig,
-		kConnect,
-		kPublish,
 		kGNSSUpdate,
 		kIdle,
 		kFatalError
 	};
 
-	using Message = std::pair<Topic, std::string>;
-
 public:
 	SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
 				CliendID client_id, Username username, Password password);
 
-	void run() noexcept;
+	void enableMQTT() noexcept;
+	void disableMQTT() noexcept;
 	void process() noexcept;
+	void setupGNSS(const Topic& topic, uint32_t timeout) noexcept;
 
 	void publishMessage(const Topic& topic, const std::string& message) noexcept;
 
 private:
-	void start_() noexcept;
-	void connectSetup_() noexcept;
-	void MQTTConfig_() noexcept;
-	void connect_() noexcept;
-	void publish_() noexcept;
 	void GNSSUpdate_() noexcept;
 	void idle_() noexcept;
 	void fatalError_() noexcept;
@@ -62,11 +52,6 @@ private:
 	Status rawSend_(const std::string& str, std::string& reply) noexcept;
 
 	static bool checkOk_(const std::string& str) noexcept;
-
-	inline void setState_(State new_state) noexcept {
-		prevState_ = state_;
-		state_ = new_state;
-	}
 
 private:
 	UART_HandleTypeDef *huart_{};
@@ -78,9 +63,6 @@ private:
 	Password password_;
 
 	State state_;
-	State prevState_;
-
-	std::queue<Message> msg_queue_;
 };
 
 #endif //TESTSIM7000C_SIM7000MQTT_HPP

@@ -3,6 +3,7 @@
 //
 
 #include "SIM7000MQTT.hpp"
+#include "ATCommands.hpp"
 
 #include <utility>
 
@@ -20,27 +21,62 @@ SIM7000MQTT::SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
 
 }
 
-void SIM7000MQTT::run() noexcept {
-	setState_(State::kStart);
+void SIM7000MQTT::enableMQTT() noexcept {
+	std::string reply{};
+	Status res;
+
+	res = rawSend_("AT" AT_ENDL, reply);
+	res = rawSend_("AT" AT_ENDL, reply);
+	res = rawSend_("AT" AT_ENDL, reply);
+	res = rawSend_(AT_CNACT_ON AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+
+	res = rawSend_(AT_SMCONF_URL + url_ + "," + port_ + AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+
+	res = rawSend_(AT_SMCONF_CLIENTID + client_id_ + AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+
+	res = rawSend_(AT_SMCONF_USERNAME + username_ + AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+
+	res = rawSend_(AT_SMCONF_PASSWORD + password_ + AT_ENDL, reply);
+	res = rawSend_("AT+SMCONF=\"KEEPTIME\",60" AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+
+	res = rawSend_(AT_SMCONN AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+}
+
+void SIM7000MQTT::disableMQTT() noexcept {
+	std::string reply{};
+	Status res;
+
+	res = rawSend_(AT_SMDISC AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
+
+	res = rawSend_(AT_CNACT_OFF AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
 }
 
 void SIM7000MQTT::process() noexcept {
 	switch (state_) {
-		case State::kStart:
-			start_();
-			break;
-		case State::kConnectSetup:
-			connectSetup_();
-			break;
-		case State::kMQTTConfig:
-			MQTTConfig_();
-			break;
-		case State::kConnect:
-			connect_();
-			break;
-		case State::kPublish:
-			publish_();
-			break;
 		case State::kGNSSUpdate:
 			GNSSUpdate_();
 			break;
@@ -55,27 +91,19 @@ void SIM7000MQTT::process() noexcept {
 	}
 }
 
+void SIM7000MQTT::setupGNSS(const SIM7000MQTT::Topic& topic, uint32_t timeout) noexcept {
+
+}
+
 void SIM7000MQTT::publishMessage(const SIM7000MQTT::Topic& topic, const std::string& message) noexcept {
+	std::string cmd = AT_SMPUB + topic + "," + std::to_string(message.size()) + ",1,1";// + "\r" + message + AT_ENDL;
 
-}
-
-void SIM7000MQTT::start_() noexcept {
-
-}
-
-void SIM7000MQTT::connectSetup_() noexcept {
-
-}
-
-void SIM7000MQTT::MQTTConfig_() noexcept {
-
-}
-
-void SIM7000MQTT::connect_() noexcept {
-
-}
-
-void SIM7000MQTT::publish_() noexcept {
+	std::string reply{};
+	auto res = rawSend_(cmd + AT_ENDL, reply);
+	res = rawSend_(message + AT_ENDL, reply);
+//	if (res != Status::kOk || !checkOk_(reply)) {
+//		return;
+//	}
 
 }
 
@@ -93,21 +121,26 @@ void SIM7000MQTT::fatalError_() noexcept {
 
 SIM7000MQTT::Status SIM7000MQTT::rawSend_(const std::string& str, std::string& reply) noexcept {
 
-	auto res = HAL_UART_Transmit(huart_, reinterpret_cast<const uint8_t *>(str.c_str()), str.length(), 10);
+	auto res = HAL_UART_Transmit(huart_, reinterpret_cast<const uint8_t *>(str.c_str()), str.length(), 10000);
 	if (res != HAL_OK)
 		return Status::kError;
 
-	static char temp_buffer[256];
-	uint16_t size;
-	res = HAL_UARTEx_ReceiveToIdle(huart_, reinterpret_cast<uint8_t *>(temp_buffer), sizeof(temp_buffer), &size, 5000);
-	if (res != HAL_OK)
-		return Status::kError;
+	char temp_buffer[256]{};
+	uint16_t size{};
+//	while (size < 10) {
+//		HAL_UART_Receive_IT(huart_, reinterpret_cast<uint8_t *>(&temp_buffer[size++]), 1);
+//		HAL_Delay(10);
+//	}
+//	res = HAL_UARTEx_ReceiveToIdle(huart_, reinterpret_cast<uint8_t *>(temp_buffer), sizeof(temp_buffer), &size, 3000);
+	res = HAL_UART_Receive(huart_, reinterpret_cast<uint8_t *>(temp_buffer), 256, 5000);
+//	if (res != HAL_OK)
+//		return Status::kError;
 
 	reply = std::string{temp_buffer};
 
 	return Status::kOk;
 }
+
 bool SIM7000MQTT::checkOk_(const std::string& str) noexcept {
 	return str.find("OK") != std::string::npos;
 }
-
