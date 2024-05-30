@@ -8,8 +8,12 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <queue>
+#include <array>
 
 #include "usart.h"
+#include "ATParser.hpp"
+
 
 class SIM7000MQTT {
 public:
@@ -21,19 +25,23 @@ public:
 
 	using Topic = std::string;
 
+	using Message = std::pair<Topic, std::string>;
+
 	enum class Status {
-		kOk,
-		kError
+		kError,
+		kOk
 	};
 
 private:
 	enum class State {
-		kInit,
+		kWaitSIMInit,
 		kSetupMQTT,
 		kEnableMQTT,
 		kDisableMQTT,
 		kGNSSUpdate,
 		kIdle,
+		kPublishMessage,
+		kCheckReceive,
 		kFatalError
 	};
 
@@ -41,6 +49,7 @@ public:
 	SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
 				CliendID client_id, Username username, Password password);
 
+	void waitSIMInit_() noexcept;
 	void enableMQTT() noexcept;
 	void setupMQTT() noexcept;
 	void disableMQTT() noexcept;
@@ -52,17 +61,29 @@ public:
 	void rxCallback(uint16_t size) noexcept;
 
 private:
-	void init_() noexcept;
 	void setupMQTT_() noexcept;
 	void enableMQTT_() noexcept;
 	void disableMQTT_() noexcept;
 	void GNSSUpdate_() noexcept;
 	void idle_() noexcept;
+	void publishMessage_() noexcept;
+	void checkReceive_() noexcept;
 	void fatalError_() noexcept;
 
-	Status rawSend_(const std::string& str, std::string& reply, uint32_t timeout = 3000) noexcept;
+	void rawSend_(const std::string& str) noexcept;
 
-	static bool checkOk_(const std::string& str) noexcept;
+	static inline bool checkOk_(const std::string& str) noexcept
+	{
+		return str.find("OK") != std::string::npos || str.find('>') != std::string::npos ||
+				str.find("SMS Ready") != std::string::npos;
+	}
+
+
+	inline void setState_(State state) noexcept
+	{
+		prevState_ = state_;
+		state_ = state;
+	}
 
 private:
 	UART_HandleTypeDef *huart_{};
@@ -73,14 +94,30 @@ private:
 	Username username_;
 	Password password_;
 
-	State state_;
-
 	std::vector<std::string> setup_mqtt_cmds_;
 	std::vector<std::string> enable_mqtt_cmds_;
 	std::vector<std::string> disable_mqtt_cmds_;
+	std::array<std::string, 2> publish_message_cmds_;
 
-	char rx_buffer_[256]{};
+	State state_;
+	State prevState_;
+
+	uint8_t wait_sim_init_flags_{};
+
+	char rx_raw_buffer_[256]{};
 	uint16_t rx_size_{};
+	uint8_t error_cnt_{};
+
+	std::string current_response_;
+
+	bool is_ready_{false};
+	bool is_mqtt_enabled_{false};
+
+	std::queue<Message> tx_queue_;
+	std::queue<std::string> rx_queue_;
+
+	uint8_t current_cmd_idx_{};
+	ATParser::Status parser_status_{ATParser::Status::kOk};
 };
 
 #endif //TESTSIM7000C_SIM7000MQTT_HPP

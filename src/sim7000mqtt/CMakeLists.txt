@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.23)
 
 project(sim7000mqtt)
 
-add_library(${PROJECT_NAME} STATIC SIM7000MQTT.cpp SIM7000MQTT.hpp)
+add_library(${PROJECT_NAME} STATIC SIM7000MQTT.cpp SIM7000MQTT.hpp ATParser.cpp ATParser.hpp)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC stm32cubemx)
 

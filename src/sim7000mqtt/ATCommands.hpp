@@ -5,7 +5,7 @@
 #ifndef TESTSIM7000C_ATCOMMANDS_HPP
 #define TESTSIM7000C_ATCOMMANDS_HPP
 
-#define AT "AT"
+#define AT "ATE0"
 #define AT_CNACT_ON  AT "+CNACT=1,\"cmnet\""
 #define AT_CNACT_OFF AT "+CNACT=0"
 
