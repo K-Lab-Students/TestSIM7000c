@@ -14,9 +14,9 @@
 
 static constexpr uint8_t kMaxErrorCnt{3};
 
-SIM7000MQTT::SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
+SIM7000MQTT::SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port port,
 						 CliendID client_id, Username username, Password password) :
-		huart_(huart),
+		comm_(std::move(comm)),
 		url_(std::move(url)),
 		port_(std::move(port)),
 		client_id_(std::move(client_id)),
@@ -45,8 +45,6 @@ SIM7000MQTT::SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
 			AT_SMDISC AT_ENDL,
 			AT_CNACT_OFF AT_ENDL
 	};
-
-	HAL_UARTEx_ReceiveToIdle_IT(huart_, reinterpret_cast<uint8_t *>(rx_raw_buffer_), sizeof(rx_raw_buffer_));
 }
 
 void SIM7000MQTT::enableMQTT() noexcept
@@ -85,8 +83,8 @@ void SIM7000MQTT::process() noexcept
 		case State::kPublishMessage:
 			publishMessage_();
 			break;
-		case State::kCheckReceive:
-			checkReceive_();
+		case State::kWaitCommunicator:
+			waitCommunicator_();
 			break;
 		case State::kFatalError:
 			fatalError_();
@@ -104,21 +102,6 @@ void SIM7000MQTT::setupGNSS(const SIM7000MQTT::Topic& topic, uint32_t timeout) n
 void SIM7000MQTT::publishMessage(const SIM7000MQTT::Topic& topic, const std::string& message) noexcept
 {
 	tx_queue_.emplace(topic, message);
-}
-
-void SIM7000MQTT::rxCallback(uint16_t size) noexcept
-{
-	is_ready_ = true;
-	rx_size_ = size;
-
-	char temp[100]{};
-	sprintf(temp, "Get: {%s}\n", rx_raw_buffer_);
-	HAL_UART_Transmit(&huart3, reinterpret_cast<const uint8_t *>(temp), strlen(temp), 100);
-
-	rx_queue_.emplace(rx_raw_buffer_, rx_raw_buffer_ + size);
-
-	HAL_UARTEx_ReceiveToIdle_IT(huart_, reinterpret_cast<uint8_t *>(rx_raw_buffer_), sizeof(rx_raw_buffer_));
-	memset(rx_raw_buffer_, 0, rx_size_);
 }
 
 void SIM7000MQTT::waitSIMInit_() noexcept
@@ -143,7 +126,7 @@ void SIM7000MQTT::waitSIMInit_() noexcept
 		setState_(State::kSetupMQTT);
 		return;
 	}
-	setState_(State::kCheckReceive);
+	setState_(State::kWaitCommunicator);
 }
 
 void SIM7000MQTT::setupMQTT_() noexcept
@@ -162,8 +145,8 @@ void SIM7000MQTT::setupMQTT_() noexcept
 		return;
 	}
 
-	rawSend_(setup_mqtt_cmds_[current_cmd_idx_]);
-	setState_(State::kCheckReceive);
+	comm_->rawSend(setup_mqtt_cmds_[current_cmd_idx_]);
+	setState_(State::kWaitCommunicator);
 }
 
 void SIM7000MQTT::enableMQTT_() noexcept
@@ -199,8 +182,8 @@ void SIM7000MQTT::enableMQTT_() noexcept
 		return;
 	}
 
-	rawSend_(enable_mqtt_cmds_[current_cmd_idx_]);
-	setState_(State::kCheckReceive);
+	comm_->rawSend(enable_mqtt_cmds_[current_cmd_idx_]);
+	setState_(State::kWaitCommunicator);
 }
 
 void SIM7000MQTT::disableMQTT_() noexcept
@@ -218,13 +201,10 @@ void SIM7000MQTT::disableMQTT_() noexcept
 	} else if (error_cnt_ >= kMaxErrorCnt) {
 		setState_(State::kFatalError);
 		return;
-//		error_cnt_ = 0;
-//
-//		current_cmd_idx_++;
 	}
 
-	rawSend_(disable_mqtt_cmds_[current_cmd_idx_]);
-	setState_(State::kCheckReceive);
+	comm_->rawSend(disable_mqtt_cmds_[current_cmd_idx_]);
+	setState_(State::kWaitCommunicator);
 }
 
 void SIM7000MQTT::GNSSUpdate_() noexcept
@@ -267,34 +247,19 @@ void SIM7000MQTT::publishMessage_() noexcept
 		return;
 	}
 
-	rawSend_(publish_message_cmds_[current_cmd_idx_]);
-	setState_(State::kCheckReceive);
+	comm_->rawSend(publish_message_cmds_[current_cmd_idx_]);
+	setState_(State::kWaitCommunicator);
 }
 
-void SIM7000MQTT::checkReceive_() noexcept
+void SIM7000MQTT::waitCommunicator_() noexcept
 {
-	if (!rx_queue_.empty()) {
-		current_response_ += rx_queue_.back();
-		rx_queue_.pop();
-
-		parser_status_ = ATParser::parse(current_response_);
-		if (parser_status_ != ATParser::Status::kNotFullInput) {
-			setState_(prevState_);
-			current_response_.clear();
-		}
+	if (comm_->isAvailable()) {
+		parser_status_ = comm_->get();
+		setState_(prevState_);
 	}
 }
 
 void SIM7000MQTT::fatalError_() noexcept
 {
 
-}
-
-void SIM7000MQTT::rawSend_(const std::string& str) noexcept
-{
-	HAL_UART_Transmit(huart_, reinterpret_cast<const uint8_t *>(str.c_str()), str.length(), 1000);
-
-	char temp[100]{};
-	sprintf(temp, "Try: {%s}\n", str.c_str());
-	HAL_UART_Transmit(&huart3, reinterpret_cast<const uint8_t *>(temp), strlen(temp), 100);
 }

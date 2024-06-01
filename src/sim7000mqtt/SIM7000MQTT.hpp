@@ -10,10 +10,11 @@
 #include <vector>
 #include <queue>
 #include <array>
+#include <memory>
 
 #include "usart.h"
 #include "ATParser.hpp"
-
+#include "ATCommunicator.hpp"
 
 class SIM7000MQTT {
 public:
@@ -41,12 +42,12 @@ private:
 		kGNSSUpdate,
 		kIdle,
 		kPublishMessage,
-		kCheckReceive,
+		kWaitCommunicator,
 		kFatalError
 	};
 
 public:
-	SIM7000MQTT(UART_HandleTypeDef *huart, URL url, Port port,
+	SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port port,
 				CliendID client_id, Username username, Password password);
 
 	void waitSIMInit_() noexcept;
@@ -58,8 +59,6 @@ public:
 
 	void publishMessage(const Topic& topic, const std::string& message) noexcept;
 
-	void rxCallback(uint16_t size) noexcept;
-
 private:
 	void setupMQTT_() noexcept;
 	void enableMQTT_() noexcept;
@@ -67,17 +66,8 @@ private:
 	void GNSSUpdate_() noexcept;
 	void idle_() noexcept;
 	void publishMessage_() noexcept;
-	void checkReceive_() noexcept;
+	void waitCommunicator_() noexcept;
 	void fatalError_() noexcept;
-
-	void rawSend_(const std::string& str) noexcept;
-
-	static inline bool checkOk_(const std::string& str) noexcept
-	{
-		return str.find("OK") != std::string::npos || str.find('>') != std::string::npos ||
-				str.find("SMS Ready") != std::string::npos;
-	}
-
 
 	inline void setState_(State state) noexcept
 	{
@@ -86,7 +76,7 @@ private:
 	}
 
 private:
-	UART_HandleTypeDef *huart_{};
+	std::shared_ptr<ATCommunicator> comm_{};
 
 	URL url_;
 	Port port_;

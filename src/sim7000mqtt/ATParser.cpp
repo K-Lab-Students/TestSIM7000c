@@ -14,7 +14,7 @@ ATParser::Status ATParser::parse(const std::string& str) noexcept
 		return Status::kWaitInput;
 	}
 
-	if (*(str.end() - 2) != '\r' && *(str.end() - 1) != '\n') {
+	if ((*(str.end() - 2) != '\r' && *(str.end() - 1) != '\n') || str.size() == 2) {
 		return Status::kNotFullInput;
 	}
 
