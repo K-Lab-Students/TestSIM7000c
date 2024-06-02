@@ -50,24 +50,24 @@ public:
 	SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port port,
 				CliendID client_id, Username username, Password password);
 
-	void waitSIMInit_() noexcept;
 	void enableMQTT() noexcept;
 	void setupMQTT() noexcept;
 	void disableMQTT() noexcept;
-	void process() noexcept;
+	void process(ATParser::Status status ) noexcept;
 	void setupGNSS(const Topic& topic, uint32_t timeout) noexcept;
 
 	void publishMessage(const Topic& topic, const std::string& message) noexcept;
 
 private:
-	void setupMQTT_() noexcept;
-	void enableMQTT_() noexcept;
-	void disableMQTT_() noexcept;
-	void GNSSUpdate_() noexcept;
-	void idle_() noexcept;
-	void publishMessage_() noexcept;
-	void waitCommunicator_() noexcept;
-	void fatalError_() noexcept;
+	void waitSIMInit_(ATParser::Status status) noexcept;
+	void setupMQTT_(ATParser::Status status) noexcept;
+	void enableMQTT_(ATParser::Status status) noexcept;
+	void disableMQTT_(ATParser::Status status) noexcept;
+	void GNSSUpdate_(ATParser::Status status) noexcept;
+	void idle_(ATParser::Status status) noexcept;
+	void publishMessage_(ATParser::Status status) noexcept;
+	void waitCommunicator_(ATParser::Status status) noexcept;
+	void fatalError_(ATParser::Status status) noexcept;
 
 	inline void setState_(State state) noexcept
 	{
@@ -94,17 +94,13 @@ private:
 
 	uint8_t wait_sim_init_flags_{};
 
-	char rx_raw_buffer_[256]{};
-	uint16_t rx_size_{};
 	uint8_t error_cnt_{};
 
 	std::string current_response_;
 
-	bool is_ready_{false};
 	bool is_mqtt_enabled_{false};
 
 	std::queue<Message> tx_queue_;
-	std::queue<std::string> rx_queue_;
 
 	uint8_t current_cmd_idx_{};
 	ATParser::Status parser_status_{ATParser::Status::kOk};

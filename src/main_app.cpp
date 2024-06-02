@@ -4,8 +4,8 @@
 
 #include "main_app.h"
 
-#include "SIM7000MQTT.hpp"
-#include "ATCommunicator.hpp"
+#include "sim7000mqtt/SIM7000MQTT.hpp"
+#include "sim7000mqtt/ATCommunicator.hpp"
 
 #include <memory>
 
@@ -18,12 +18,18 @@ const SIM7000MQTT::CliendID kClientID = "dfrobot";
 const SIM7000MQTT::Username kUsername = "homeassistant";
 const SIM7000MQTT::Password kPassword = "up4IxZQaVLvxSeYbzRkJ";
 
+void sim7000mqttProcessWrapper(ATParser::Status status)
+{
+	sim_7000_mqtt->process(status);
+}
+
 void main_app_init()
 {
 	HAL_Delay(1000);
-	sim_7000_mqtt = std::make_shared<SIM7000MQTT>(at_communicator, kURL, kPort, kClientID, kUsername, kPassword);
 	at_communicator = std::make_shared<ATCommunicator>(&huart1);
-//	sim_7000_mqtt->publishMessage("test/test_stm", "109");
+	sim_7000_mqtt = std::make_shared<SIM7000MQTT>(at_communicator, kURL, kPort, kClientID, kUsername, kPassword);
+	at_communicator->subscribe({ATParser::Status::kOk, ATParser::Status::kError}, sim7000mqttProcessWrapper);
+	sim_7000_mqtt->publishMessage("test/test_stm", "109");
 }
 
 uint32_t timeout = 0;
@@ -31,10 +37,10 @@ uint32_t timeout = 0;
 void main_app_process()
 {
 	at_communicator->process();
-	if (HAL_GetTick() - timeout >= 100) {
-		sim_7000_mqtt->process();
-		timeout = HAL_GetTick();
-	}
+//	if (HAL_GetTick() - timeout >= 100) {
+//		sim_7000_mqtt->process();
+//		timeout = HAL_GetTick();
+//	}
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)

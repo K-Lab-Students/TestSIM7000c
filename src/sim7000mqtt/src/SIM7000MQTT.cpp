@@ -37,6 +37,7 @@ SIM7000MQTT::SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port por
 	enable_mqtt_cmds_ = std::vector<std::string>{
 			AT AT_ENDL,
 			AT_CNACT_ON AT_ENDL,
+			AT_SMCONN AT_ENDL,
 			AT_SMCONN AT_ENDL
 	};
 
@@ -59,35 +60,35 @@ void SIM7000MQTT::disableMQTT() noexcept
 {
 }
 
-void SIM7000MQTT::process() noexcept
+void SIM7000MQTT::process(ATParser::Status status) noexcept
 {
 	switch (state_) {
 		case State::kWaitSIMInit:
-			waitSIMInit_();
+			waitSIMInit_(status);
 			break;
 		case State::kSetupMQTT:
-			setupMQTT_();
+			setupMQTT_(status);
 			break;
 		case State::kEnableMQTT:
-			enableMQTT_();
+			enableMQTT_(status);
 			break;
 		case State::kDisableMQTT:
-			disableMQTT_();
+			disableMQTT_(status);
 			break;
 		case State::kGNSSUpdate:
-			GNSSUpdate_();
+			GNSSUpdate_(status);
 			break;
 		case State::kIdle:
-			idle_();
+			idle_(status);
 			break;
 		case State::kPublishMessage:
-			publishMessage_();
+			publishMessage_(status);
 			break;
 		case State::kWaitCommunicator:
-			waitCommunicator_();
+			waitCommunicator_(status);
 			break;
 		case State::kFatalError:
-			fatalError_();
+			fatalError_(status);
 			break;
 		default:
 			break;
@@ -96,7 +97,6 @@ void SIM7000MQTT::process() noexcept
 
 void SIM7000MQTT::setupGNSS(const SIM7000MQTT::Topic& topic, uint32_t timeout) noexcept
 {
-
 }
 
 void SIM7000MQTT::publishMessage(const SIM7000MQTT::Topic& topic, const std::string& message) noexcept
@@ -104,9 +104,9 @@ void SIM7000MQTT::publishMessage(const SIM7000MQTT::Topic& topic, const std::str
 	tx_queue_.emplace(topic, message);
 }
 
-void SIM7000MQTT::waitSIMInit_() noexcept
+void SIM7000MQTT::waitSIMInit_(ATParser::Status status) noexcept
 {
-	switch (parser_status_) {
+	switch (status) {
 		case ATParser::Status::kCPIN:
 			wait_sim_init_flags_ |= 0b0001;
 			break;
@@ -122,14 +122,15 @@ void SIM7000MQTT::waitSIMInit_() noexcept
 		default:
 			break;
 	}
-	if (wait_sim_init_flags_ >= 0b0111) {
+//	if (wait_sim_init_flags_ >= 0b0111) {
+	if (wait_sim_init_flags_ >= 0) {
 		setState_(State::kSetupMQTT);
 		return;
 	}
 	setState_(State::kWaitCommunicator);
 }
 
-void SIM7000MQTT::setupMQTT_() noexcept
+void SIM7000MQTT::setupMQTT_(ATParser::Status status) noexcept
 {
 	if (current_cmd_idx_ == setup_mqtt_cmds_.size() - 1) {
 		current_cmd_idx_ = 0;
@@ -137,7 +138,7 @@ void SIM7000MQTT::setupMQTT_() noexcept
 		return;
 	}
 
-	if (parser_status_ == ATParser::Status::kOk) {
+	if (status == ATParser::Status::kOk) {
 		error_cnt_ = 0;
 		current_cmd_idx_++;
 	} else if (error_cnt_ >= kMaxErrorCnt) {
@@ -149,7 +150,7 @@ void SIM7000MQTT::setupMQTT_() noexcept
 	setState_(State::kWaitCommunicator);
 }
 
-void SIM7000MQTT::enableMQTT_() noexcept
+void SIM7000MQTT::enableMQTT_(ATParser::Status status) noexcept
 {
 	if (current_cmd_idx_ == enable_mqtt_cmds_.size() - 1 && parser_status_ == ATParser::Status::kAPPPDP) {
 		current_cmd_idx_ = 0;
@@ -158,7 +159,7 @@ void SIM7000MQTT::enableMQTT_() noexcept
 		return;
 	}
 
-	switch (parser_status_) {
+	switch (status) {
 
 		case ATParser::Status::kAPPPDP:
 			break;
@@ -174,7 +175,7 @@ void SIM7000MQTT::enableMQTT_() noexcept
 			break;
 	}
 
-	if (parser_status_ == ATParser::Status::kOk) {
+	if (status == ATParser::Status::kOk) {
 		error_cnt_ = 0;
 		current_cmd_idx_++;
 	} else if (error_cnt_ >= kMaxErrorCnt) {
@@ -186,7 +187,7 @@ void SIM7000MQTT::enableMQTT_() noexcept
 	setState_(State::kWaitCommunicator);
 }
 
-void SIM7000MQTT::disableMQTT_() noexcept
+void SIM7000MQTT::disableMQTT_(ATParser::Status status) noexcept
 {
 	if (current_cmd_idx_ == disable_mqtt_cmds_.size() - 1) {
 		current_cmd_idx_ = 0;
@@ -195,7 +196,7 @@ void SIM7000MQTT::disableMQTT_() noexcept
 		return;
 	}
 
-	if (parser_status_ == ATParser::Status::kOk) {
+	if (status == ATParser::Status::kOk) {
 		error_cnt_ = 0;
 		current_cmd_idx_++;
 	} else if (error_cnt_ >= kMaxErrorCnt) {
@@ -207,12 +208,12 @@ void SIM7000MQTT::disableMQTT_() noexcept
 	setState_(State::kWaitCommunicator);
 }
 
-void SIM7000MQTT::GNSSUpdate_() noexcept
+void SIM7000MQTT::GNSSUpdate_(ATParser::Status status) noexcept
 {
 
 }
 
-void SIM7000MQTT::idle_() noexcept
+void SIM7000MQTT::idle_(ATParser::Status status) noexcept
 {
 	if (!tx_queue_.empty()) {
 		if (!is_mqtt_enabled_) {
@@ -221,13 +222,13 @@ void SIM7000MQTT::idle_() noexcept
 		}
 		auto [topic, message] = tx_queue_.back();
 		tx_queue_.pop();
-		publish_message_cmds_[0] = topic;
-		publish_message_cmds_[1] = message;
+		publish_message_cmds_[0] = AT_SMPUB"\"" + topic + "\"," + std::to_string(message.size()) + ",1,1" + AT_ENDL;
+		publish_message_cmds_[1] = message + AT_ENDL;
 		setState_(State::kPublishMessage);
 	}
 }
 
-void SIM7000MQTT::publishMessage_() noexcept
+void SIM7000MQTT::publishMessage_(ATParser::Status status) noexcept
 {
 	if (current_cmd_idx_ == publish_message_cmds_.size() - 1) {
 		current_cmd_idx_ = 0;
@@ -239,7 +240,7 @@ void SIM7000MQTT::publishMessage_() noexcept
 		return;
 	}
 
-	if (parser_status_ == ATParser::Status::kOk) {
+	if (status == ATParser::Status::kOk) {
 		error_cnt_ = 0;
 		current_cmd_idx_++;
 	} else if (error_cnt_ >= kMaxErrorCnt) {
@@ -251,7 +252,7 @@ void SIM7000MQTT::publishMessage_() noexcept
 	setState_(State::kWaitCommunicator);
 }
 
-void SIM7000MQTT::waitCommunicator_() noexcept
+void SIM7000MQTT::waitCommunicator_(ATParser::Status status) noexcept
 {
 	if (comm_->isAvailable()) {
 		parser_status_ = comm_->get();
@@ -259,7 +260,7 @@ void SIM7000MQTT::waitCommunicator_() noexcept
 	}
 }
 
-void SIM7000MQTT::fatalError_() noexcept
+void SIM7000MQTT::fatalError_(ATParser::Status status) noexcept
 {
 
 }
