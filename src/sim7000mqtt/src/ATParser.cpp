@@ -6,39 +6,40 @@
 
 ATParser::Status ATParser::parse(const std::string& str) noexcept
 {
-	if (str[0] != '\r' || str[1] != '\n') {
+	std::string nwtr{str, str.find("\r\n"), str.size() - str.find("\r\n")};
+	if (nwtr[0] != '\r' || nwtr[1] != '\n') {
 		return Status::kNotValid;
 	}
 
-	if (*(str.end() - 1) == '>') {
+	if (*(nwtr.end() - 1) == '>') {
 		return Status::kWaitInput;
 	}
 
-	if ((*(str.end() - 2) != '\r' && *(str.end() - 1) != '\n') || str.size() == 2) {
+	if ((*(nwtr.end() - 2) != '\r' && *(nwtr.end() - 1) != '\n') || nwtr.size() == 2) {
 		return Status::kNotFullInput;
 	}
 
-	if (str[2] == '+') {
-		if (str[3] == 'C') {
-			if (str[4] == 'P') {
+	if (nwtr[2] == '+') {
+		if (nwtr[3] == 'C') {
+			if (nwtr[4] == 'P') {
 				return Status::kCPIN;
-			} else if (str[4] == 'F') {
+			} else if (nwtr[4] == 'F') {
 				return Status::kCFUN;
 			} else {
 				return Status::kUnknown;
 			}
 		}
-		if (str[3] == 'A') {
+		if (nwtr[3] == 'A') {
 			return Status::kAPPPDP;
 		}
 		return Status::kUnknown;
-	} else if (str[2] == 'S' && str[3] == 'M' && str[4] == 'S') {
+	} else if (nwtr[2] == 'S' && nwtr[3] == 'M' && nwtr[4] == 'S') {
 		return Status::kSMSRdy;
-	} else if (str[2] == 'R' && str[3] == 'D' && str[4] == 'Y') {
+	} else if (nwtr[2] == 'R' && nwtr[3] == 'D' && nwtr[4] == 'Y') {
 		return Status::kRDY;
-	} else if (str[2] == 'O' && str[3] == 'K') {
+	} else if (nwtr[2] == 'O' && nwtr[3] == 'K') {
 		return Status::kOk;
-	} else if (str[2] == 'E' && str[4] == 'R' && str[5] == 'R') {
+	} else if (nwtr[2] == 'E' && nwtr[4] == 'R' && nwtr[5] == 'R') {
 		return Status::kError;
 	}
 

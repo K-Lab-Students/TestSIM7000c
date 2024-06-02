@@ -95,6 +95,11 @@ void SIM7000MQTT::process(ATParser::Status status) noexcept
 	}
 }
 
+void SIM7000MQTT::onReceive(ATParser::Status status) noexcept {
+	parser_status_ = status;
+	is_received_ = true;
+}
+
 void SIM7000MQTT::setupGNSS(const SIM7000MQTT::Topic& topic, uint32_t timeout) noexcept
 {
 }
@@ -106,7 +111,7 @@ void SIM7000MQTT::publishMessage(const SIM7000MQTT::Topic& topic, const std::str
 
 void SIM7000MQTT::waitSIMInit_(ATParser::Status status) noexcept
 {
-	switch (status) {
+	switch (parser_status_) {
 		case ATParser::Status::kCPIN:
 			wait_sim_init_flags_ |= 0b0001;
 			break;
@@ -122,8 +127,8 @@ void SIM7000MQTT::waitSIMInit_(ATParser::Status status) noexcept
 		default:
 			break;
 	}
-//	if (wait_sim_init_flags_ >= 0b0111) {
-	if (wait_sim_init_flags_ >= 0) {
+	if (wait_sim_init_flags_ >= 0b0111) {
+//	if (wait_sim_init_flags_ >= 0) {
 		setState_(State::kSetupMQTT);
 		return;
 	}
@@ -132,19 +137,19 @@ void SIM7000MQTT::waitSIMInit_(ATParser::Status status) noexcept
 
 void SIM7000MQTT::setupMQTT_(ATParser::Status status) noexcept
 {
-	if (current_cmd_idx_ == setup_mqtt_cmds_.size() - 1) {
+	if (current_cmd_idx_ == setup_mqtt_cmds_.size()) {
 		current_cmd_idx_ = 0;
 		setState_(State::kIdle);
 		return;
 	}
 
-	if (status == ATParser::Status::kOk) {
-		error_cnt_ = 0;
-		current_cmd_idx_++;
-	} else if (error_cnt_ >= kMaxErrorCnt) {
-		setState_(State::kFatalError);
-		return;
-	}
+//	if (parser_status_ == ATParser::Status::kOk) {
+//		error_cnt_ = 0;
+//		current_cmd_idx_++;
+//	} else if (error_cnt_ >= kMaxErrorCnt) {
+//		setState_(State::kFatalError);
+//		return;
+//	}
 
 	comm_->rawSend(setup_mqtt_cmds_[current_cmd_idx_]);
 	setState_(State::kWaitCommunicator);
@@ -152,36 +157,36 @@ void SIM7000MQTT::setupMQTT_(ATParser::Status status) noexcept
 
 void SIM7000MQTT::enableMQTT_(ATParser::Status status) noexcept
 {
-	if (current_cmd_idx_ == enable_mqtt_cmds_.size() - 1 && parser_status_ == ATParser::Status::kAPPPDP) {
+	if (current_cmd_idx_ == enable_mqtt_cmds_.size()) {
 		current_cmd_idx_ = 0;
 		is_mqtt_enabled_ = true;
 		setState_(State::kIdle);
 		return;
 	}
 
-	switch (status) {
-
-		case ATParser::Status::kAPPPDP:
-			break;
-		case ATParser::Status::kOk:
-			break;
-		case ATParser::Status::kError:
-			break;
-		case ATParser::Status::kNotFullInput:
-			break;
-		case ATParser::Status::kUnknown:
-			break;
-		default:
-			break;
-	}
-
-	if (status == ATParser::Status::kOk) {
-		error_cnt_ = 0;
-		current_cmd_idx_++;
-	} else if (error_cnt_ >= kMaxErrorCnt) {
-		setState_(State::kFatalError);
-		return;
-	}
+//	switch (parser_status_) {
+//
+//		case ATParser::Status::kAPPPDP:
+//			break;
+//		case ATParser::Status::kOk:
+//			break;
+//		case ATParser::Status::kError:
+//			break;
+//		case ATParser::Status::kNotFullInput:
+//			break;
+//		case ATParser::Status::kUnknown:
+//			break;
+//		default:
+//			break;
+//	}
+//
+//	if (parser_status_ == ATParser::Status::kOk) {
+//		error_cnt_ = 0;
+//		current_cmd_idx_++;
+//	} else if (error_cnt_ >= kMaxErrorCnt) {
+//		setState_(State::kFatalError);
+//		return;
+//	}
 
 	comm_->rawSend(enable_mqtt_cmds_[current_cmd_idx_]);
 	setState_(State::kWaitCommunicator);
@@ -196,7 +201,7 @@ void SIM7000MQTT::disableMQTT_(ATParser::Status status) noexcept
 		return;
 	}
 
-	if (status == ATParser::Status::kOk) {
+	if (parser_status_ == ATParser::Status::kOk) {
 		error_cnt_ = 0;
 		current_cmd_idx_++;
 	} else if (error_cnt_ >= kMaxErrorCnt) {
@@ -240,7 +245,7 @@ void SIM7000MQTT::publishMessage_(ATParser::Status status) noexcept
 		return;
 	}
 
-	if (status == ATParser::Status::kOk) {
+	if (parser_status_ == ATParser::Status::kOk) {
 		error_cnt_ = 0;
 		current_cmd_idx_++;
 	} else if (error_cnt_ >= kMaxErrorCnt) {
@@ -254,9 +259,16 @@ void SIM7000MQTT::publishMessage_(ATParser::Status status) noexcept
 
 void SIM7000MQTT::waitCommunicator_(ATParser::Status status) noexcept
 {
-	if (comm_->isAvailable()) {
-		parser_status_ = comm_->get();
+	if (is_received_) {
+		if (parser_status_ == ATParser::Status::kOk) {
+			error_cnt_ = 0;
+			current_cmd_idx_++;
+		} else if (error_cnt_ >= kMaxErrorCnt) {
+			setState_(State::kFatalError);
+			return;
+		}
 		setState_(prevState_);
+		is_received_ = false;
 	}
 }
 

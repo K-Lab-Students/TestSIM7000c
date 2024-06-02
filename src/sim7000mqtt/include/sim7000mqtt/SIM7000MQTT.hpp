@@ -53,7 +53,8 @@ public:
 	void enableMQTT() noexcept;
 	void setupMQTT() noexcept;
 	void disableMQTT() noexcept;
-	void process(ATParser::Status status ) noexcept;
+	void process(ATParser::Status status) noexcept;
+	void onReceive(ATParser::Status status) noexcept;
 	void setupGNSS(const Topic& topic, uint32_t timeout) noexcept;
 
 	void publishMessage(const Topic& topic, const std::string& message) noexcept;
@@ -99,6 +100,7 @@ private:
 	std::string current_response_;
 
 	bool is_mqtt_enabled_{false};
+	bool is_received_{false};
 
 	std::queue<Message> tx_queue_;
 

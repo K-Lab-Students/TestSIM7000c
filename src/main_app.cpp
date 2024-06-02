@@ -20,15 +20,20 @@ const SIM7000MQTT::Password kPassword = "up4IxZQaVLvxSeYbzRkJ";
 
 void sim7000mqttProcessWrapper(ATParser::Status status)
 {
-	sim_7000_mqtt->process(status);
+//	sim_7000_mqtt->process(status);
+	sim_7000_mqtt->onReceive(status);
 }
 
 void main_app_init()
 {
-	HAL_Delay(1000);
 	at_communicator = std::make_shared<ATCommunicator>(&huart1);
 	sim_7000_mqtt = std::make_shared<SIM7000MQTT>(at_communicator, kURL, kPort, kClientID, kUsername, kPassword);
-	at_communicator->subscribe({ATParser::Status::kOk, ATParser::Status::kError}, sim7000mqttProcessWrapper);
+	at_communicator->subscribe({ATParser::Status::kOk, ATParser::Status::kError,
+								ATParser::Status::kCPIN, ATParser::Status::kRDY,
+								ATParser::Status::kCFUN, ATParser::Status::kSMSRdy},
+							   sim7000mqttProcessWrapper);
+	at_communicator->start();
+	sim_7000_mqtt->setupMQTT();
 	sim_7000_mqtt->publishMessage("test/test_stm", "109");
 }
 
@@ -37,10 +42,10 @@ uint32_t timeout = 0;
 void main_app_process()
 {
 	at_communicator->process();
-//	if (HAL_GetTick() - timeout >= 100) {
-//		sim_7000_mqtt->process();
-//		timeout = HAL_GetTick();
-//	}
+	if (HAL_GetTick() - timeout >= 100) {
+		sim_7000_mqtt->process(ATParser::Status::kOk);
+		timeout = HAL_GetTick();
+	}
 }
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
