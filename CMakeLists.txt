@@ -27,7 +27,6 @@ set(CMAKE_PROJECT_NAME TestSIM7000c)
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
 
-
 # Enable CMake support for ASM and C languages
 enable_language(C CXX ASM)
 
@@ -37,6 +36,8 @@ message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
+
+add_compile_options(-O3)
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)

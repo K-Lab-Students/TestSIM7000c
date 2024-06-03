@@ -50,8 +50,9 @@ public:
 	SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port port,
 				CliendID client_id, Username username, Password password);
 
-	void enableMQTT() noexcept;
+	void waitInit() noexcept;
 	void setupMQTT() noexcept;
+	void enableMQTT() noexcept;
 	void disableMQTT() noexcept;
 	void process(ATParser::Status status) noexcept;
 	void onReceive(ATParser::Status status) noexcept;

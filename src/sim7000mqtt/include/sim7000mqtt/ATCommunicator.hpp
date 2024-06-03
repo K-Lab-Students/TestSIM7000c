@@ -20,7 +20,8 @@ private:
 public:
 	ATCommunicator(UART_HandleTypeDef *huart);
 
-	void rawSend(const std::string& str) noexcept;
+	ATParser::Status rawSend(const std::string& str) noexcept;
+	ATParser::Status waitResponse() noexcept;
 	void rxCallback(uint16_t size) noexcept;
 	void start() noexcept;
 	void process() noexcept;

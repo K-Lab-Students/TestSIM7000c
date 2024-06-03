@@ -37,7 +37,6 @@ SIM7000MQTT::SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port por
 	enable_mqtt_cmds_ = std::vector<std::string>{
 			AT AT_ENDL,
 			AT_CNACT_ON AT_ENDL,
-			AT_SMCONN AT_ENDL,
 			AT_SMCONN AT_ENDL
 	};
 
@@ -48,12 +47,54 @@ SIM7000MQTT::SIM7000MQTT(std::shared_ptr<ATCommunicator> comm, URL url, Port por
 	};
 }
 
-void SIM7000MQTT::enableMQTT() noexcept
+void SIM7000MQTT::waitInit() noexcept
 {
+	do {
+		parser_status_ = comm_->waitResponse();
+		switch (parser_status_) {
+			case ATParser::Status::kCPIN:
+				wait_sim_init_flags_ |= 0b0001;
+				break;
+			case ATParser::Status::kRDY:
+				wait_sim_init_flags_ |= 0b1000;
+				break;
+			case ATParser::Status::kCFUN:
+				wait_sim_init_flags_ |= 0b0010;
+				break;
+			case ATParser::Status::kSMSRdy:
+				wait_sim_init_flags_ |= 0b0100;
+				break;
+			default:
+				break;
+		}
+	}
+	while (wait_sim_init_flags_ < 0b0111);
+//	if (wait_sim_init_flags_ >= 0b0111) {
+////	if (wait_sim_init_flags_ >= 0) {
+//		setState_(State::kSetupMQTT);
+//		return;
+//	}
+//	setState_(State::kWaitCommunicator);
 }
 
 void SIM7000MQTT::setupMQTT() noexcept
 {
+	for (uint8_t i = 0; i < setup_mqtt_cmds_.size();) {
+		HAL_Delay(1000);
+		auto s = comm_->rawSend(setup_mqtt_cmds_[i]);
+		if (s == ATParser::Status::kOk)
+			++i;
+	}
+}
+
+void SIM7000MQTT::enableMQTT() noexcept
+{
+	for (uint8_t i = 0; i < enable_mqtt_cmds_.size();) {
+		HAL_Delay(1000);
+		auto s = comm_->rawSend(enable_mqtt_cmds_[i]);
+		if (s == ATParser::Status::kOk)
+			++i;
+	}
 }
 
 void SIM7000MQTT::disableMQTT() noexcept
@@ -95,7 +136,8 @@ void SIM7000MQTT::process(ATParser::Status status) noexcept
 	}
 }
 
-void SIM7000MQTT::onReceive(ATParser::Status status) noexcept {
+void SIM7000MQTT::onReceive(ATParser::Status status) noexcept
+{
 	parser_status_ = status;
 	is_received_ = true;
 }

@@ -6,6 +6,9 @@
 
 ATParser::Status ATParser::parse(const std::string& str) noexcept
 {
+	if (str.find("\r\n") == std::string::npos)
+		return Status::kNotFullInput;
+
 	std::string nwtr{str, str.find("\r\n"), str.size() - str.find("\r\n")};
 	if (nwtr[0] != '\r' || nwtr[1] != '\n') {
 		return Status::kNotValid;
@@ -44,4 +47,51 @@ ATParser::Status ATParser::parse(const std::string& str) noexcept
 	}
 
 	return Status::kUnknown;
+}
+
+ATParser::Status ATParser::parse(const uint8_t *str, uint8_t size) noexcept
+{
+	uint8_t idx{};
+
+	while (str[idx] != '\r' && idx < size)
+		idx++;
+	if (str[idx + 1] == '\r')
+		idx++;
+
+	idx += 2;
+
+	if (idx >= size) {
+		return Status::kNotFullInput;
+	}
+
+
+	if (str[idx] == '>') {
+		return Status::kWaitInput;
+	}
+	if (str[idx] == '+') {
+		if (str[idx + 1] == 'C') {
+			if (str[idx + 2] == 'P') {
+				return Status::kCPIN;
+			} else if (str[idx + 2] == 'F') {
+				return Status::kCFUN;
+			} else {
+				return Status::kUnknown;
+			}
+		}
+		if (str[idx + 1] == 'A') {
+			return Status::kAPPPDP;
+		}
+		return Status::kUnknown;
+	} else if (str[idx] == 'S' && str[idx + 1] == 'M' && str[idx + 2] == 'S') {
+		return Status::kSMSRdy;
+	} else if (str[idx] == 'R' && str[idx + 1] == 'D' && str[idx + 2] == 'Y') {
+		return Status::kRDY;
+	} else if (str[idx] == 'O' && str[idx + 1] == 'K') {
+		return Status::kOk;
+	} else if (str[idx] == 'E' && str[idx + 1] == 'R' && str[idx + 2] == 'R') {
+		return Status::kError;
+	}
+//
+	return Status::kNotFullInput;
+//	return Status::kUnknown;
 }

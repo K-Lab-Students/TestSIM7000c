@@ -25,6 +25,7 @@ public:
 
 public:
 	static Status parse(const std::string& str) noexcept;
+	static Status parse(const uint8_t* str, uint8_t size) noexcept;
 
 };
 
