@@ -49,9 +49,10 @@ void main_app_init()
 //								ATParser::Status::kCFUN, ATParser::Status::kSMSRdy},
 //							   sim7000mqttProcessWrapper);
 	sim_7000_mqtt->waitInit();
-	sim_7000_mqtt->setupMQTT();
-	sim_7000_mqtt->enableMQTT();
+//	sim_7000_mqtt->setupMQTT();
+//	sim_7000_mqtt->enableMQTT();
 //	sim_7000_mqtt->publishMessage("test/test_stm", "109");
+//	sim_7000_mqtt->disableMQTT();
 }
 
 uint32_t timeout = 0;
@@ -60,6 +61,11 @@ uint16_t size;
 
 void main_app_process()
 {
+	sim_7000_mqtt->setupMQTT();
+	sim_7000_mqtt->enableMQTT();
+	sim_7000_mqtt->publishMessage("test/test_stm", "109");
+	sim_7000_mqtt->disableMQTT();
+	HAL_Delay(4000);
 //	HAL_UARTEx_ReceiveToIdle(&huart1, buffer, sizeof(buffer), &size, 1000);
 //	HAL_UART_Transmit(&huart3, buffer, size, 1000);
 //	HAL_Delay(1);

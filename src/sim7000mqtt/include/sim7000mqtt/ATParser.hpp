@@ -11,7 +11,8 @@ class ATParser {
 public:
 	enum class Status {
 		kCPIN,
-		kAPPPDP,
+		kAPPPDPActive,
+		kAPPPDPDeactive,
 		kRDY,
 		kCFUN,
 		kSMSRdy,

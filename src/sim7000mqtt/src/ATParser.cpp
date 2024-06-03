@@ -33,7 +33,7 @@ ATParser::Status ATParser::parse(const std::string& str) noexcept
 			}
 		}
 		if (nwtr[3] == 'A') {
-			return Status::kAPPPDP;
+			return Status::kAPPPDPActive;
 		}
 		return Status::kUnknown;
 	} else if (nwtr[2] == 'S' && nwtr[3] == 'M' && nwtr[4] == 'S') {
@@ -79,7 +79,13 @@ ATParser::Status ATParser::parse(const uint8_t *str, uint8_t size) noexcept
 			}
 		}
 		if (str[idx + 1] == 'A') {
-			return Status::kAPPPDP;
+			if (str[idx + 10] == 'A') {
+				return Status::kAPPPDPActive;
+			} else if (str[idx + 10] == 'D') {
+				return Status::kAPPPDPDeactive;
+			} else {
+				return Status::kUnknown;
+			}
 		}
 		return Status::kUnknown;
 	} else if (str[idx] == 'S' && str[idx + 1] == 'M' && str[idx + 2] == 'S') {

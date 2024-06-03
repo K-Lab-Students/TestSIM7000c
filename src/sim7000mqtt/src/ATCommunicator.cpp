@@ -24,7 +24,7 @@ ATParser::Status ATCommunicator::rawSend(const std::string& str) noexcept
 ATParser::Status ATCommunicator::waitResponse() noexcept
 {
 	uint16_t size, idx{};
-	uint8_t resp[256]{};
+	static uint8_t resp[256];
 	ATParser::Status res;
 
 	do {
@@ -34,13 +34,10 @@ ATParser::Status ATCommunicator::waitResponse() noexcept
 		idx += size;
 	}
 	while ((res = ATParser::parse(resp, idx)) == ATParser::Status::kNotFullInput);
-//	while (rx_raw_buffer_[0] != '\r');
-	res = ATParser::parse(resp, idx);
 	memset(rx_raw_buffer_, 0, sizeof(rx_raw_buffer_));
 
-	char debug[100]{};
-	sprintf(debug, "Get: {%s}\n", resp);
-	HAL_UART_Transmit(&huart3, reinterpret_cast<const uint8_t *>(debug), strlen(debug), 100);
+	HAL_UART_Transmit(&huart3, resp, idx, 100);
+	memset(resp, 0, sizeof(resp));
 
 	return res;
 }
