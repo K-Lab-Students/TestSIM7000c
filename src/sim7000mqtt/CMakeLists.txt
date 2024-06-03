@@ -6,9 +6,7 @@ project(sim7000mqtt)
 
 set(SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/src/SIM7000MQTT.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/ATParser.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ATCommunicator.cpp
-
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

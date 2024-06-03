@@ -13,7 +13,6 @@
 #include <memory>
 
 #include "usart.h"
-#include "ATParser.hpp"
 #include "ATCommunicator.hpp"
 
 class SIM7000MQTT {
