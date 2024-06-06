@@ -1,0 +1,3 @@
+[submodule "src/sim7000cmqtt"]
+	path = src/sim7000cmqtt
+	url = git@github.com:K-Lab-Students/sim7000cmqtt.git
