@@ -4,7 +4,7 @@
 
 #include "main_app.h"
 
-#include "sim7000mqtt/SIM7000MQTT.hpp"
+#include "sim7000cmqtt/SIM7000MQTT.hpp"
 
 namespace {
 std::shared_ptr<SIM7000MQTT> sim_7000_mqtt;
@@ -22,11 +22,19 @@ void main_app_init()
 {
 	sim_7000_mqtt = std::make_shared<SIM7000MQTT>(&huart1, kURL, kPort, kClientID, kUsername, kPassword);
 	sim_7000_mqtt->waitInit();
+	sim_7000_mqtt->setupMQTT();
+
+	sim_7000_mqtt->enableMQTT();
+
+	sim_7000_mqtt->setupGNSS();
+
+	sim_7000_mqtt->disableMQTT();
+
+	while(1);
 }
 
 void main_app_process()
 {
-	sim_7000_mqtt->setupMQTT();
 	sim_7000_mqtt->enableMQTT();
 	sim_7000_mqtt->publishMessage("test/test_stm", std::to_string(counter++));
 	sim_7000_mqtt->disableMQTT();

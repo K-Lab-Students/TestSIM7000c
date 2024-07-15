@@ -27,11 +27,8 @@ set(CMAKE_PROJECT_NAME TestSIM7000c)
 # Include toolchain file
 include("cmake/gcc-arm-none-eabi.cmake")
 
-# Enable CMake support for ASM and C languages
-enable_language(C CXX ASM)
-
 # Core project settings
-project(${CMAKE_PROJECT_NAME})
+project(${CMAKE_PROJECT_NAME} C CXX ASM)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Create an executable object type
